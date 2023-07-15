@@ -25,7 +25,7 @@ https://github.com/EveVengerov/Ardupilot_Gazebo_ROS/assets/70894557/9c91c5ae-e17
 
 ### 3. AruCo landing:
 
-This is the demon of the script src\precision_landing.cpp. The drone takes off at an attitude of 3 meters, simultaneously the camera looks for an aruco marker, if the marker is detected it hovers over the marker at an attitude of 0.1 meters while waiting for land command. 
+This is the demo of the script src\precision_landing.cpp. The drone takes off at an attitude of 3 meters, simultaneously the camera looks for an aruco marker, if the marker is detected it hovers over the marker at an attitude of 0.1 meters while waiting for land command. 
 
 
 https://github.com/EveVengerov/Ardupilot_Gazebo_ROS/assets/70894557/62e4b154-d522-4b57-a93c-c557365cd296
