@@ -3,6 +3,7 @@
 ## Tasks:
 ### 1. Simulation environment setup:
 For my task I have chosen Ardupilot to get started with, the reason being easy to follow documentation on integrating it with ros using the Mavros package, also having some experience with ROS is easy to get started with communicating with Ardupilot and Gazebo at the same time . Below is a diagram showing the relationship among them.
+
 ![ROS_ArduPilot_Gazebo](https://github.com/EveVengerov/Ardupilot_Gazebo_ROS/assets/70894557/b73222fb-f6d2-426e-b007-0bfaf2255682)
 
 Video demmo of the setup environment: 
