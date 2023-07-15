@@ -6,7 +6,7 @@ For my task I have chosen Ardupilot to get started with, the reason being easy t
 
 ![ROS_ArduPilot_Gazebo](https://github.com/EveVengerov/Ardupilot_Gazebo_ROS/assets/70894557/b73222fb-f6d2-426e-b007-0bfaf2255682)
 
-Video demmo of the setup environment: 
+Video demo of the setup environment: 
 The drone takes off at an altitude of 10 mtrs, mob=ves forward in y axis at a speed of 10 mtrs/s towards its destination at 30 mtrs from launch, then finally lands.
 The script for this maneuver is given in src\set_wp.cpp
 
