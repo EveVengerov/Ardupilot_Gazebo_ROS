@@ -5,7 +5,7 @@ int main(int argc, char** argv)
 {
 	//initialize ros 
 	ros::init(argc, argv, "gnc_node");
-	ros::NodeHandle gnc_node;
+	ros::NodeHandle gnc_node("~");
 	
 	//initialize control publisher/subscribers
 	init_publisher_subscriber(gnc_node);
@@ -15,50 +15,60 @@ int main(int argc, char** argv)
 
 	//wait for used to switch to mode GUIDED
 	wait4start();
+	
 
 	//create local reference frame 
 	initialize_local_frame();
 
-	//request takeoff
-	takeoff(3);
+	set_speed(7);
+
+	// TakeOff
+	int takeoff_alt = 10;
+	takeoff(takeoff_alt);
+
+
 
 	//specify some waypoints 
 	std::vector<gnc_api_waypoint> waypointList;
 	gnc_api_waypoint nextWayPoint;
+
+
+	int num_samples = 10;
+	float pi = 3.14;
+	int vf = 30;
+	double r = 3.0;
+	int n  = 5;
+
+	// start circle 
 	nextWayPoint.x = 0;
-	nextWayPoint.y = 0;
-	nextWayPoint.z = 3;
+	nextWayPoint.y = r;
+	nextWayPoint.z = takeoff_alt;
 	nextWayPoint.psi = 0;
 	waypointList.push_back(nextWayPoint);
-	nextWayPoint.x = 5;
-	nextWayPoint.y = 0;
-	nextWayPoint.z = 3;
-	nextWayPoint.psi = -90;
-	waypointList.push_back(nextWayPoint);
-	nextWayPoint.x = 5;
-	nextWayPoint.y = 5;
-	nextWayPoint.z = 3;
-	nextWayPoint.psi = 0;
-	waypointList.push_back(nextWayPoint);
-	nextWayPoint.x = 0;
-	nextWayPoint.y = 5;
-	nextWayPoint.z = 3;
-	nextWayPoint.psi = 90;
-	waypointList.push_back(nextWayPoint);
-	nextWayPoint.x = 0;
-	nextWayPoint.y = 0;
-	nextWayPoint.z = 3;
-	nextWayPoint.psi = 180;
-	waypointList.push_back(nextWayPoint);
+
+
+	for(float t = 0.0; t<=1.0; t = t + 1.0/num_samples)
+	{
+		nextWayPoint.x = r * sin(2*pi*n*t);
+		nextWayPoint.y = vf*t;
+		nextWayPoint.z = takeoff_alt + r * cos(2*pi*n*t);
+		nextWayPoint.psi = 0;
+		// nextWayPoint.psi = -360*t;
+		waypointList.push_back(nextWayPoint);
+	}
+
+
+
+	// return to origin
 	nextWayPoint.x = 0;
 	nextWayPoint.y = 0;
-	nextWayPoint.z = 3;
+	nextWayPoint.z = takeoff_alt;
 	nextWayPoint.psi = 0;
 	waypointList.push_back(nextWayPoint);
 
 
 	//specify control loop rate. We recommend a low frequency to not over load the FCU with messages. Too many messages will cause the drone to be sluggish
-	ros::Rate rate(2.0);
+	ros::Rate rate(4.0);
 	int counter = 0;
 	while(ros::ok())
 	{

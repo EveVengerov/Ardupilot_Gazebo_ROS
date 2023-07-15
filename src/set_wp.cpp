@@ -1,5 +1,6 @@
+// Contains all necessary functions for drone set-up 
 #include <gnc_functions.hpp>
-//include API 
+
 int main(int argc, char** argv)
 {
     //initialize ros 
@@ -7,16 +8,36 @@ int main(int argc, char** argv)
     ros::NodeHandle gnc_node("~");
     init_publisher_subscriber(gnc_node);
   
+    //specify control loop rate. We recommend a low frequency to not over load the FCU with messages. Too many messages will cause the drone to be sluggish
     ros::Rate rate(2.0);
+
+    // Waitng for connection from FCU
     wait4connect();
-    wait4start();
-    arm();
-    takeoff_global(30.2, 80.5, 5);
+
+    // Setting to mode guided
+    set_mode("GUIDED");
+
+    //create local reference frame 
+    initialize_local_frame();
+
+    // Take off attitude in meters 
+    takeoff(10);
+
+
+    // Setting the hoizontal speed in meters/sec
+    set_speed(10);
+
 
     while(ros::ok())
-    {
-        set_yaw(10, 20, -1, 1);
-        set_destination_lla_raw(-35.364261,149.165230, 5, 45);
+    {   
+        ros::spinOnce();
         rate.sleep();
+
+        // Check for position tolerance 
+        if(check_waypoint_reached(.3) == 0)
+        {
+            set_destination(0,30,10, 0);
+        }
+  
     }    
 } 

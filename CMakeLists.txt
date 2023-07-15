@@ -14,7 +14,10 @@ find_package(catkin REQUIRED COMPONENTS
   mavros_msgs
   rospy
   sensor_msgs
+  cv_bridge
 )
+
+find_package(OpenCV REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -220,3 +223,14 @@ target_link_libraries(set_wp ${catkin_LIBRARIES})
 #target_link_libraries(avoidance_sol ${catkin_LIBRARIES})
 
 # Add tutorial add_executable lines here 
+
+add_executable(spiral src/spiral.cpp)
+target_link_libraries(spiral ${catkin_LIBRARIES})
+
+add_executable(spiral_trajectory src/spiral_trajectory.cpp)
+target_link_libraries(spiral_trajectory ${catkin_LIBRARIES})
+
+add_executable(precision_landing src/aruco_detection.cpp)
+target_link_libraries(precision_landing  ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
+

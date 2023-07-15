@@ -8,6 +8,7 @@
 #include <mavros_msgs/State.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Twist.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <cmath>
 #include <math.h>
@@ -22,6 +23,40 @@
 #include <ros/duration.h>
 #include <iostream>
 #include <string>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+#include <cmath>
+#include <Eigen/Dense>
+
+double rotationVector2eulerAngles(float rx,float ry,float rz) {
+    // Input rotation vector
+    Eigen::Vector3d rotationVector(rx, ry,rz);
+
+    // Compute rotation matrix using Rodriguez formula
+    double angle = rotationVector.norm();
+    Eigen::Vector3d axis = rotationVector.normalized();
+
+    Eigen::Matrix3d rotationMatrix;
+    rotationMatrix = Eigen::AngleAxisd(angle, axis);
+
+    // Convert rotation matrix to Euler angles
+    double roll, pitch, yaw;
+    roll = atan2(rotationMatrix(2, 1), rotationMatrix(2, 2));
+    pitch = atan2(-rotationMatrix(2, 0), std::sqrt(rotationMatrix(2, 1) * rotationMatrix(2, 1) + rotationMatrix(2, 2) * rotationMatrix(2, 2)));
+    yaw = atan2(rotationMatrix(1, 0), rotationMatrix(0, 0));
+
+    // // Print the resulting Euler angles
+    // std::cout << "Euler Angles (in radians):\n";
+    // std::cout << "Roll: " << roll << "\n";
+    // std::cout << "Pitch: " << pitch << "\n";
+    // std::cout << "Yaw: " << yaw << std::endl;
+
+    return yaw;
+}
+
+
+
+  
 
 
 
@@ -35,10 +70,12 @@ mavros_msgs::State current_state_g;
 nav_msgs::Odometry current_pose_g;
 geometry_msgs::Pose correction_vector_g;
 geometry_msgs::Point local_offset_pose_g;
+// geometry_msgs::Vector3 local_offset_vel_g;
 geometry_msgs::PoseStamped waypoint_g;
 
 float current_heading_g;
 float local_offset_g;
+// float local_offset_vel_g;
 float correction_heading_g = 0;
 float local_desired_heading_g; 
 
@@ -112,6 +149,31 @@ geometry_msgs::Point get_current_location()
 	return current_pos_local;
 
 }
+
+
+// // Get current velocity
+// geometry_msgs::Point enu_2_local_vel(nav_msgs::Odometry current_vel_enu)
+// {
+//   float x_vel = current_vel_g.twist.twist.linear.x;
+// 	float y_vel = current_vel_g.twist.twist.linear.y;
+// 	float z_vel = current_vel_g.twist.twist.linear.z;
+
+//   geometry_msgs::Point current_vel_local;
+//   current_vel_local.x = x*cos((local_offset_vel_g - 90)*deg2rad) - y*sin((local_offset_vel_g - 90)*deg2rad);
+//   current_vel_local.y = x*sin((local_offset_vel_g - 90)*deg2rad) + y*cos((local_offset_vel_g - 90)*deg2rad);
+//   current_vel_local.z = z;
+
+//   return current_vel_local;
+
+//   //ROS_INFO("Local position %f %f %f",X, Y, Z);
+// }
+// geometry_msgs::Vector3 get_current_velocity()
+// {
+// 	geometry_msgs::Vector3 current_vel_local;
+// 	current_vel_local = enu_2_local(current_vel_g);
+// 	return current_vel_local;
+// }
+
 float get_current_heading()
 {
 	return current_heading_g;
@@ -152,6 +214,8 @@ void set_heading(float heading)
   waypoint_g.pose.orientation.y = qy;
   waypoint_g.pose.orientation.z = qz;
 }
+
+
 // set position to fly to in the local frame
 /**
 \ingroup control_functions
@@ -170,7 +234,8 @@ void set_destination(float x, float y, float z, float psi)
 	x = Xlocal + correction_vector_g.position.x + local_offset_pose_g.x;
 	y = Ylocal + correction_vector_g.position.y + local_offset_pose_g.y;
 	z = Zlocal + correction_vector_g.position.z + local_offset_pose_g.z;
-	ROS_INFO("Destination set to x: %f y: %f z: %f origin frame", x, y, z);
+	ROS_INFO("Destination set to x: %f y: %f z: %f wrt origin frame", x, y, z);
+	ROS_INFO("Current Heading : %f", get_current_heading());
 
 	waypoint_g.pose.position.x = x;
 	waypoint_g.pose.position.y = y;
@@ -179,6 +244,37 @@ void set_destination(float x, float y, float z, float psi)
 	local_pos_pub.publish(waypoint_g);
 	
 }
+
+//  Set destination, giiven the pose wrt to drone frame
+void set_destination_camera2local_frame(float x, float y, float z, float theta)
+{
+		float deg2rad = (M_PI/180);
+		geometry_msgs::Point current_pos_local;
+		current_pos_local = get_current_location();
+		float heading_g = get_current_heading();
+
+		float psi = -heading_g ;
+		ROS_INFO("Current Heading : %f", heading_g);
+
+		// float P =  sqrt(pow(x,2) + pow(y,2));
+
+		float deltaX = x * cos(psi*deg2rad) - y * sin(psi*deg2rad)+ current_pos_local.x ;
+		float deltaY = x * sin(psi*deg2rad) + y * cos(psi *deg2rad)+ current_pos_local.y ;
+
+	// //check for correct position 
+	// float deltaX = x- current_pos_local.x ;
+  //   float deltaY = y - current_pos_local.y ;
+    float deltaZ = 0.1;//current_pose_g.pose.pose.position.z - z;
+    // float dMag = sqrt( pow(deltaX, 2) + pow(deltaY, 2) + pow(deltaZ, 2) );
+    // ROS_INFO("dMag %f", dMag);
+    // ROS_INFO("current pose x %F y %f z %f", (current_pose_g.pose.pose.position.x), (current_pose_g.pose.pose.position.y), (current_pose_g.pose.pose.position.z));
+    // ROS_INFO("waypoint pose x %F y %f z %f", waypoint_g.pose.position.x, waypoint_g.pose.position.y,waypoint_g.pose.position.z);
+    //check orientation
+    float heading = -theta+heading_g;
+
+    set_destination(deltaX,deltaY,deltaZ,heading);
+}
+
 void set_destination_lla(float lat, float lon, float alt, float heading)
 {
 	geographic_msgs::GeoPoseStamped lla_msg;
@@ -270,6 +366,25 @@ int wait4start()
 		return -1;	
 	}
 }
+
+int wait4start_auto()
+{
+	ROS_INFO("Waiting for user to set mode to AUTO");
+	while(ros::ok() && current_state_g.mode != "AUTO")
+	{
+	    ros::spinOnce();
+	    ros::Duration(0.01).sleep();
+  	}
+  	if(current_state_g.mode == "AUTO")
+	{
+		ROS_INFO("Mode set to GUIDED. Mission starting");
+		return 0;
+	}else{
+		ROS_INFO("Error starting mission!!");
+		return -1;	
+	}
+}
+
 /**
 \ingroup control_functions
 This function will create a local reference frame based on the starting location of the drone. This is typically done right before takeoff. This reference frame is what all of the the set destination commands will be in reference to.
@@ -283,8 +398,6 @@ int initialize_local_frame()
 	for (int i = 1; i <= 30; i++) {
 		ros::spinOnce();
 		ros::Duration(0.1).sleep();
-
-		
 
 		float q0 = current_pose_g.pose.pose.orientation.w;
 		float q1 = current_pose_g.pose.pose.orientation.x;
@@ -422,6 +535,8 @@ int check_waypoint_reached(float pos_tolerance=0.3, float heading_tolerance=0.01
 		return 0;
 	}
 }
+
+
 /**
 \ingroup control_functions
 this function changes the mode of the drone to a user specified mode. This takes the mode as a string. ex. set_mode("GUIDED")
@@ -493,7 +608,7 @@ int auto_set_current_waypoint(int seq)
 	ROS_INFO("setting current wp to wp # %d", seq);
 	if(auto_waypoint_set_current_client.call(wp_set_cur_msg))
 	{
-		ROS_INFO("set current wp secceeded %d", wp_set_cur_msg.response.success);
+		ROS_INFO("set current wp succeeded %d", wp_set_cur_msg.response.success);
 	}else{
 		ROS_ERROR("set current wp failed %d", wp_set_cur_msg.response.success);
 	}
@@ -557,6 +672,56 @@ int takeoff_global(float lat, float lon, float alt)
     sleep(2);
     return 0;
 }
+
+
+
+// Eigen::Quaterniond local_quaternion(){  
+// 	float current_heading_global = get_current_heading();
+// 	float local_current_heading = current_heading_global ;
+//   ROS_INFO("local Heading in degrees %f ", local_current_heading);
+//   float yaw = local_current_heading*(M_PI/180);
+//   ROS_INFO("loacl current heading: %d", local_current_heading);
+//   float pitch = 0;
+//   float roll = 0;
+
+//   float cy = cos(yaw * 0.5);
+//   float sy = sin(yaw * 0.5);
+//   float cr = cos(roll * 0.5);
+//   float sr = sin(roll * 0.5);
+//   float cp = cos(pitch * 0.5);
+//   float sp = sin(pitch * 0.5);
+
+//   float qw = cy * cr * cp + sy * sr * sp;
+//   float qx = cy * sr * cp - sy * cr * sp;
+//   float qy = cy * cr * sp + sy * sr * cp;
+//   float qz = sy * cr * cp - cy * sr * sp;
+
+//   Eigen::Quaterniond quaternion(qx,qy,qz,qw);
+
+//   return quaternion;
+// }
+
+
+
+// Eigen::Matrix4d calculateTransformationMatrix() {
+//   Eigen::Matrix4d transformationMatrix = Eigen::Matrix4d::Identity();
+//   // Get the transformation from camera frame to local frame (modify with actual values)
+
+//   geometry_msgs::Point current_pos_local;
+//   current_pos_local = get_current_location();
+
+//   Eigen::Vector3d translationVector(current_pos_local.x, current_pos_local.y, current_pos_local.y);
+
+//   Eigen::Quaterniond rotationQuaternion = local_quaternion();
+
+//     transformationMatrix.block(0, 0, 3, 3) = rotationQuaternion.toRotationMatrix();
+//     transformationMatrix.block(0, 3, 3, 1) = translationVector;
+//     return transformationMatrix;
+//   }
+
+
+
+
 /**
 \ingroup control_functions
 This function is called at the beginning of a program and will start of the communication links to the FCU. The function requires the program's ros nodehandle as an input 
